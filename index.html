@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Management Dashboard</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="header__brand">
+        <svg class="header__logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        <div class="header__title-group">
+          <h1>User Management</h1>
+          <div class="api-status" id="api-status" aria-live="polite">
+            <span class="api-status__dot" id="api-status-dot"></span>
+            <span class="api-status__text" id="api-status-text">Connecting to JSONPlaceholder…</span>
+          </div>
+        </div>
+      </div>
+      <div class="header__actions">
+        <button type="button" id="btn-api-log" class="btn btn--secondary btn--sm" title="Show API activity">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+          </svg>
+          API Log
+        </button>
+        <button type="button" id="btn-add-user" class="btn btn--primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Add User
+        </button>
+      </div>
+    </header>
+
+    <!-- JSONPlaceholder integration panel -->
+    <aside id="api-panel" class="api-panel" hidden aria-label="JSONPlaceholder API integration">
+      <div class="api-panel__header">
+        <div>
+          <h2>JSONPlaceholder Integration</h2>
+          <p class="api-panel__subtitle">Free REST API — <a href="https://jsonplaceholder.typicode.com" target="_blank" rel="noopener">jsonplaceholder.typicode.com</a></p>
+        </div>
+        <button type="button" id="btn-close-api-panel" class="modal__close" aria-label="Close API panel">&times;</button>
+      </div>
+      <div class="api-panel__endpoints">
+        <h3>Endpoints used</h3>
+        <ul class="endpoint-list">
+          <li><span class="method method--get">GET</span> <code>/users</code> — List all users</li>
+          <li><span class="method method--get">GET</span> <code>/users/:id</code> — Fetch single user (Edit)</li>
+          <li><span class="method method--post">POST</span> <code>/users</code> — Add new user</li>
+          <li><span class="method method--put">PUT</span> <code>/users/:id</code> — Update user</li>
+          <li><span class="method method--delete">DELETE</span> <code>/users/:id</code> — Delete user</li>
+        </ul>
+      </div>
+      <div class="api-panel__log">
+        <h3>Live API activity</h3>
+        <ul id="api-activity-list" class="activity-list">
+          <li class="activity-list__empty">No requests yet — interact with the dashboard to see API calls.</li>
+        </ul>
+      </div>
+    </aside>
+
+    <main class="main">
+      <section class="toolbar" aria-label="Search and filters">
+        <div class="search-box">
+          <svg class="search-box__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input
+            type="search"
+            id="search-input"
+            class="search-box__input"
+            placeholder="Search by name, email, or department…"
+            autocomplete="off"
+            aria-label="Search users"
+          >
+        </div>
+        <div class="toolbar__actions">
+          <button type="button" id="btn-filter" class="btn btn--secondary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+            </svg>
+            Filters
+            <span id="filter-count" class="badge badge--hidden" aria-hidden="true">0</span>
+          </button>
+        </div>
+      </section>
+
+      <div id="filter-chips" class="filter-chips" aria-label="Active filters"></div>
+
+      <section class="table-section" aria-live="polite">
+        <div id="loading-state" class="state state--loading" hidden>
+          <div class="spinner" aria-hidden="true"></div>
+          <p>Loading users…</p>
+        </div>
+
+        <div id="error-state" class="state state--error" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <p id="error-message">Failed to load users.</p>
+          <button type="button" id="btn-retry" class="btn btn--secondary">Retry</button>
+        </div>
+
+        <div id="empty-state" class="state state--empty" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <line x1="23" y1="11" x2="17" y2="11"/>
+          </svg>
+          <p id="empty-message">No users found.</p>
+        </div>
+
+        <div class="table-wrapper" id="table-wrapper">
+          <table class="users-table" id="users-table">
+            <thead>
+              <tr>
+                <th scope="col">
+                  <button type="button" class="sort-btn" data-sort="id">
+                    ID <span class="sort-indicator" aria-hidden="true"></span>
+                  </button>
+                </th>
+                <th scope="col">
+                  <button type="button" class="sort-btn" data-sort="firstName">
+                    First Name <span class="sort-indicator" aria-hidden="true"></span>
+                  </button>
+                </th>
+                <th scope="col">
+                  <button type="button" class="sort-btn" data-sort="lastName">
+                    Last Name <span class="sort-indicator" aria-hidden="true"></span>
+                  </button>
+                </th>
+                <th scope="col">
+                  <button type="button" class="sort-btn" data-sort="email">
+                    Email <span class="sort-indicator" aria-hidden="true"></span>
+                  </button>
+                </th>
+                <th scope="col">
+                  <button type="button" class="sort-btn" data-sort="department">
+                    Department <span class="sort-indicator" aria-hidden="true"></span>
+                  </button>
+                </th>
+                <th scope="col" class="col-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="users-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <footer class="pagination-bar" id="pagination-bar">
+        <div class="pagination-bar__info">
+          <label for="page-size">Rows per page</label>
+          <select id="page-size" class="select" aria-label="Rows per page">
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+          <span id="pagination-info" class="pagination-info"></span>
+        </div>
+        <nav class="pagination" id="pagination" aria-label="Pagination"></nav>
+      </footer>
+    </main>
+  </div>
+
+  <!-- User Form Modal (Add / Edit) -->
+  <div id="user-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="user-modal-title" hidden>
+    <div class="modal__backdrop" data-close-modal></div>
+    <div class="modal__panel">
+      <header class="modal__header">
+        <h2 id="user-modal-title">Add User</h2>
+        <button type="button" class="modal__close" data-close-modal aria-label="Close">&times;</button>
+      </header>
+      <form id="user-form" class="modal__body" novalidate>
+        <input type="hidden" id="user-id" name="id">
+
+        <div class="form-group">
+          <label for="first-name">First Name <span class="required">*</span></label>
+          <input type="text" id="first-name" name="firstName" autocomplete="given-name" required minlength="2">
+          <span class="field-error" id="error-firstName" role="alert"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="last-name">Last Name <span class="required">*</span></label>
+          <input type="text" id="last-name" name="lastName" autocomplete="family-name" required minlength="2">
+          <span class="field-error" id="error-lastName" role="alert"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email <span class="required">*</span></label>
+          <input type="email" id="email" name="email" autocomplete="email" required>
+          <span class="field-error" id="error-email" role="alert"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="department">Department <span class="required">*</span></label>
+          <select id="department" name="department" required>
+            <option value="">Select department…</option>
+            <option value="Engineering">Engineering</option>
+            <option value="Marketing">Marketing</option>
+            <option value="Sales">Sales</option>
+            <option value="Human Resources">Human Resources</option>
+            <option value="Finance">Finance</option>
+            <option value="Operations">Operations</option>
+            <option value="Customer Support">Customer Support</option>
+            <option value="Product">Product</option>
+            <option value="Design">Design</option>
+            <option value="Legal">Legal</option>
+          </select>
+          <span class="field-error" id="error-department" role="alert"></span>
+        </div>
+
+        <footer class="modal__footer">
+          <button type="button" class="btn btn--ghost" data-close-modal>Cancel</button>
+          <button type="submit" id="user-form-submit" class="btn btn--primary">Save</button>
+        </footer>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div id="delete-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title" hidden>
+    <div class="modal__backdrop" data-close-modal></div>
+    <div class="modal__panel modal__panel--sm">
+      <header class="modal__header">
+        <h2 id="delete-modal-title">Delete User</h2>
+        <button type="button" class="modal__close" data-close-modal aria-label="Close">&times;</button>
+      </header>
+      <div class="modal__body">
+        <p id="delete-modal-message">Are you sure you want to delete this user?</p>
+      </div>
+      <footer class="modal__footer">
+        <button type="button" class="btn btn--ghost" data-close-modal>Cancel</button>
+        <button type="button" id="btn-confirm-delete" class="btn btn--danger">Delete</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Filter Modal -->
+  <div id="filter-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="filter-modal-title" hidden>
+    <div class="modal__backdrop" data-close-modal></div>
+    <div class="modal__panel modal__panel--sm">
+      <header class="modal__header">
+        <h2 id="filter-modal-title">Filter Users</h2>
+        <button type="button" class="modal__close" data-close-modal aria-label="Close">&times;</button>
+      </header>
+      <form id="filter-form" class="modal__body">
+        <div class="form-group">
+          <label for="filter-firstName">First Name</label>
+          <input type="text" id="filter-firstName" name="firstName" placeholder="Contains…">
+        </div>
+        <div class="form-group">
+          <label for="filter-lastName">Last Name</label>
+          <input type="text" id="filter-lastName" name="lastName" placeholder="Contains…">
+        </div>
+        <div class="form-group">
+          <label for="filter-email">Email</label>
+          <input type="text" id="filter-email" name="email" placeholder="Contains…">
+        </div>
+        <div class="form-group">
+          <label for="filter-department">Department</label>
+          <select id="filter-department" name="department">
+            <option value="">Any department</option>
+            <option value="Engineering">Engineering</option>
+            <option value="Marketing">Marketing</option>
+            <option value="Sales">Sales</option>
+            <option value="Human Resources">Human Resources</option>
+            <option value="Finance">Finance</option>
+            <option value="Operations">Operations</option>
+            <option value="Customer Support">Customer Support</option>
+            <option value="Product">Product</option>
+            <option value="Design">Design</option>
+            <option value="Legal">Legal</option>
+          </select>
+        </div>
+        <footer class="modal__footer">
+          <button type="button" id="btn-clear-filters" class="btn btn--ghost">Clear All</button>
+          <button type="submit" class="btn btn--primary">Apply Filters</button>
+        </footer>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
