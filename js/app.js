@@ -43,9 +43,16 @@ import {
   toggleApiPanel,
 } from './ui.js';
 
+// app.js is the only file that mutates `state` directly. api.js and
+// ui.js are kept stateless/pure-ish so this file is the single place
+// that ties "what happened" (events) to "what changed" (state) to
+// "what's shown" (render).
 const state = createInitialState();
 let searchDebounceTimer = null;
 
+// The app's one render function. Every event handler below ends by
+// mutating `state` and then calling render() — there's no two-way data
+// binding, so this is the single point where state becomes DOM.
 function render() {
   renderSortIndicators(state.sort);
 
@@ -69,6 +76,9 @@ function render() {
 
   const { users, pageData } = getProcessedUsers(state);
 
+  // If filtering/sorting shrank the result set, the page we were on may no
+  // longer exist — getProcessedUsers() already clamps it, so we just sync
+  // state back to whatever page it actually landed on.
   if (state.pagination.page !== pageData.currentPage) {
     state.pagination.page = pageData.currentPage;
   }
@@ -93,6 +103,9 @@ function render() {
   $('#page-size').value = String(state.pagination.pageSize);
 }
 
+// Initial data load (and the "Retry" button's handler). Sets loading/error
+// flags around the fetch so render() can show the right state at each step,
+// then always re-renders at the end regardless of success or failure.
 async function loadUsers() {
   state.loading = true;
   state.error = null;
@@ -125,6 +138,10 @@ async function handleAddUser() {
   openModal($('#user-modal'));
 }
 
+// Edit flow tries to reuse the already-loaded user first (instant, no
+// network) and only falls back to a fresh GET /users/:id if it's somehow
+// not in local state — covers the JSONPlaceholder integration requirement
+// without forcing an unnecessary round trip on the common path.
 async function handleEditUser(id) {
   state.formMode = 'edit';
   clearFormErrors();
@@ -154,6 +171,10 @@ function handleDeleteUser(id) {
   openModal($('#delete-modal'));
 }
 
+// Handles both Add and Edit, since they share the same form and the only
+// difference is which API call + local state update runs (state.formMode
+// decides which branch). Validation always runs first so an invalid form
+// never reaches the network.
 async function handleFormSubmit(e) {
   e.preventDefault();
   clearFormErrors();
@@ -179,12 +200,18 @@ async function handleFormSubmit(e) {
         email: payload.email,
         company: payload.company,
       });
+      // JSONPlaceholder's mock POST doesn't reliably return a usable new
+      // id, so if normalizeUser ended up without one, we synthesize the
+      // next available id locally to keep the table consistent.
       if (!newUser.id) {
         newUser.id = Math.max(0, ...state.allUsers.map((u) => u.id)) + 1;
       }
       state.allUsers.push(newUser);
       showToast('User added successfully.');
     } else {
+      // PUT here succeeds against the mock API but doesn't persist
+      // server-side, so we apply the same update to local state directly
+      // rather than trusting whatever the response body contains.
       await updateUser(formData.id, payload);
       const index = state.allUsers.findIndex((u) => u.id === formData.id);
       if (index !== -1) {
@@ -232,6 +259,10 @@ function handleSort(field) {
   render();
 }
 
+// Debounces search input so we don't re-filter/re-render on every
+// keystroke — only after the user pauses typing for 300ms. Resetting
+// page to 1 prevents landing on an empty/out-of-range page after a new
+// search narrows the result set.
 function handleSearchInput(value) {
   clearTimeout(searchDebounceTimer);
   searchDebounceTimer = setTimeout(() => {
@@ -241,6 +272,10 @@ function handleSearchInput(value) {
   }, 300);
 }
 
+// Wires up every DOM event exactly once, on load. Table row actions
+// (edit/delete) use event delegation on the tbody rather than per-row
+// listeners, since renderTable() rebuilds rows from scratch on every
+// render and per-row listeners would otherwise need re-attaching each time.
 function bindEvents() {
   $('#btn-add-user').addEventListener('click', handleAddUser);
   $('#btn-retry').addEventListener('click', loadUsers);
@@ -322,6 +357,10 @@ function bindEvents() {
 
 bindEvents();
 
+// App bootstrap: verify the JSONPlaceholder API is reachable first (so the
+// status dot and offline toast are accurate), then load the actual user
+// list regardless — loadUsers() has its own error handling if the
+// subsequent fetch fails too.
 async function init() {
   const { connected } = await checkApiConnection();
   renderApiStatus(connected);

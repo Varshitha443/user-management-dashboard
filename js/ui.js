@@ -1,3 +1,7 @@
+// Thin wrappers around querySelector/querySelectorAll. Having short names
+// used everywhere in this file cuts down on repetitive
+// document.querySelector boilerplate (DRY) and keeps render functions
+// readable as one-liners.
 export function $(selector, root = document) {
   return root.querySelector(selector);
 }
@@ -6,12 +10,20 @@ export function $$(selector, root = document) {
   return [...root.querySelectorAll(selector)];
 }
 
+// Escapes user-supplied text before it's inserted via innerHTML, by letting
+// the browser's own textContent encode it for us. This is the app's main
+// defense against XSS, since names/emails/etc. ultimately come from API
+// data or form input that we don't fully control.
 export function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
 }
 
+// Shows a transient success/error notification. The class is added on the
+// next animation frame (rather than immediately) so the browser registers
+// the initial "off-screen" state first and the CSS transition actually
+// animates in, instead of the toast just appearing instantly.
 export function showToast(message, type = 'success') {
   const container = $('#toast-container');
   const toast = document.createElement('div');
@@ -28,6 +40,8 @@ export function showToast(message, type = 'success') {
   }, 3500);
 }
 
+// Reveals a modal and moves focus into it for keyboard/screen-reader users,
+// and toggles a body class that's used in CSS to lock background scrolling.
 export function openModal(modal) {
   modal.hidden = false;
   document.body.classList.add('modal-open');
@@ -35,6 +49,9 @@ export function openModal(modal) {
   if (focusable) focusable.focus();
 }
 
+// Only removes the scroll-lock once *no* modals remain open, since two
+// modals can never be open at once in this app, but this guard keeps the
+// function safe to call even if that ever changes.
 export function closeModal(modal) {
   modal.hidden = true;
   if ($$('.modal:not([hidden])').length === 0) {
@@ -46,6 +63,10 @@ export function closeAllModals() {
   $$('.modal').forEach((modal) => closeModal(modal));
 }
 
+// The table area has four mutually-exclusive states (loading / error /
+// empty / has-data). Each render* function below only toggles its own
+// section's visibility — app.js decides which single state should be
+// shown, which keeps this file from needing to know the app's state shape.
 export function renderLoading(show) {
   $('#loading-state').hidden = !show;
   $('#table-wrapper').hidden = show;
@@ -66,6 +87,10 @@ export function renderEmpty(show, message = 'No users found.') {
   $('#table-wrapper').hidden = show;
 }
 
+// Rebuilds the whole table body from scratch on every render. For a list
+// this size (JSONPlaceholder's 10 users, paginated client-side) a full
+// re-render is simpler and less error-prone than diffing/patching individual
+// rows, at negligible performance cost.
 export function renderTable(users) {
   const tbody = $('#users-tbody');
   tbody.innerHTML = users
@@ -98,6 +123,9 @@ export function renderTable(users) {
     .join('');
 }
 
+// Updates the ▲/▼ arrows on column headers and their aria-sort attribute
+// to match current sort state, run after every render so the indicator
+// never drifts out of sync with the actual sort applied to the data.
 export function renderSortIndicators(sort) {
   $$('.sort-btn').forEach((btn) => {
     const field = btn.dataset.sort;
@@ -112,6 +140,9 @@ export function renderSortIndicators(sort) {
   });
 }
 
+// Renders the "Showing X–Y of Z" text plus prev/next/page-number buttons.
+// Hides the page-number row entirely when there's only one page, since
+// pagination controls add noise without adding function in that case.
 export function renderPagination(pageData) {
   const { currentPage, totalPages, totalItems, startIndex, endIndex } = pageData;
   const info = $('#pagination-info');
@@ -142,6 +173,9 @@ export function renderPagination(pageData) {
   `;
 }
 
+// Builds a condensed page-number list with "…" gaps (e.g. 1 … 4 5 6 … 12)
+// instead of rendering every page button, which would overflow the footer
+// once there are many pages.
 function buildPageNumbers(current, total) {
   if (total <= 7) {
     return Array.from({ length: total }, (_, i) => i + 1);
@@ -159,6 +193,10 @@ function buildPageNumbers(current, total) {
   return pages;
 }
 
+// Renders the removable "chip" row beneath the toolbar showing which
+// filters are currently active, plus updates the numeric badge on the
+// Filters button. onRemove is injected by app.js so this file stays
+// focused purely on rendering, not on how filter state actually changes.
 export function renderFilterChips(filters, onRemove) {
   const container = $('#filter-chips');
   const entries = Object.entries(filters).filter(([, v]) => v && v.trim());
@@ -198,6 +236,9 @@ export function renderFilterChips(filters, onRemove) {
   });
 }
 
+// Wipes any previously shown validation messages/error styling. Always
+// called before re-validating so old errors for now-valid fields don't
+// linger on screen.
 export function clearFormErrors() {
   $$('.field-error').forEach((el) => {
     el.textContent = '';
@@ -207,6 +248,10 @@ export function clearFormErrors() {
   });
 }
 
+// Displays the errors object produced by validateUserForm() (state.js)
+// next to each offending field. The fieldMap translates each data key
+// (e.g. "firstName") to its actual input element ID (e.g. "#first-name"),
+// since the two naming conventions differ between JS and the HTML.
 export function showFormErrors(errors) {
   clearFormErrors();
   Object.entries(errors).forEach(([field, message]) => {
@@ -223,6 +268,9 @@ export function showFormErrors(errors) {
   });
 }
 
+// Populates the Add/Edit modal. Passing null clears it back to blank
+// (used for "Add User"); passing a user object pre-fills it for editing.
+// Optional chaining + ?? '' avoids throwing if a field is missing on user.
 export function fillUserForm(user) {
   $('#user-id').value = user?.id ?? '';
   $('#first-name').value = user?.firstName ?? '';
