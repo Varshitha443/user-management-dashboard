@@ -1,155 +1,101 @@
 # User Management Dashboard
 
-A responsive web app to view, add, edit, and delete users — built for the **Ajackus JavaScript Basics Assignment**, integrated with the free **[JSONPlaceholder](https://jsonplaceholder.typicode.com)** REST API.
+This is my submission for the Ajackus JavaScript Basics Assignment. It's a small web app that lets you view, add, edit, and delete users, backed by the JSONPlaceholder API (https://jsonplaceholder.typicode.com).
 
-Built with **vanilla HTML / CSS / JavaScript** — no build step, no frameworks, no dependencies.
+I built it with plain HTML, CSS, and JavaScript — no frameworks, no build tools, no npm install needed to run it. It just needs a local server to serve the files (browsers block ES module imports when opened directly as a file).
 
----
+## How to run it
 
-## Quick Start (Easiest Way)
+**Windows, easiest way:**
 
-### Windows — double-click to run
+1. Open the project folder
+2. Double-click `START.bat`
+3. Go to http://localhost:8080 in your browser
 
-1. Open folder: `C:\Users\dell\user-mgmt-dashboard`
-2. **Double-click `START.bat`**
-3. Open browser → **http://localhost:8080**
-
-### Manual start (Command Prompt)
-
-Run these as **two separate commands** (press Enter after each):
+**Or manually, from Command Prompt:**
 
 ```cmd
-cd C:\Users\dell\user-mgmt-dashboard
+cd path\to\user-mgmt-dashboard
 python -m http.server 8080
 ```
 
-If `python` is not found, try:
+If `python` doesn't work, try `py -m http.server 8080` instead. Then open http://localhost:8080.
 
-```cmd
-py -m http.server 8080
+## What it does
+
+- Shows all users in a table — ID, First Name, Last Name, Email, Department
+- Add, Edit, and Delete users through a form modal, with a confirmation step before deleting
+- Pagination with 10/25/50/100 rows per page
+- A filter popup to narrow results by first name, last name, email, or department, with removable filter chips
+- Live search across name, email, and department
+- Click any column header to sort by it, ascending or descending
+- Works on mobile — the table switches to a stacked card layout on small screens
+- Shows loading, empty, and error states, with a retry button if a request fails
+- Form validation on the client side before anything is sent to the API
+
+## Connecting to JSONPlaceholder
+
+All the API calls live in `js/api.js`:
+
+| What it does | Method | Endpoint |
+|---|---|---|
+| Load all users | GET | `/users` |
+| Load one user (for editing) | GET | `/users/:id` |
+| Add a user | POST | `/users` |
+| Update a user | PUT | `/users/:id` |
+| Delete a user | DELETE | `/users/:id` |
+
+There's a small "API Log" panel (button in the header) that shows the actual requests going out as you use the app, and a green/red status dot showing whether JSONPlaceholder is reachable. You can also just open DevTools → Network and watch the real calls go to jsonplaceholder.typicode.com.
+
+One thing worth knowing: JSONPlaceholder's data doesn't quite match what the assignment asks for. It returns a single `name` field and a `company.name`, not separate first name, last name, and department fields. I handle this with a small adapter function (`normalizeUser` in `state.js`) that splits the name and remaps company to department, and the reverse (`toApiPayload`) when sending data back.
+
+Also — since this is a mock/test API, it doesn't actually save anything server-side. Add/Edit/Delete requests succeed and return a response, but nothing persists. To make the app still feel functional, I update the local list right after a successful request so the UI reflects your changes for the rest of your session. Refreshing the page resets it back to the original 10 users.
+
+## Project structure
+
+```
+user-mgmt-dashboard/
+├── index.html          → page markup, modals, table layout
+├── css/style.css       → all the styling
+├── js/
+│   ├── api.js          → talks to JSONPlaceholder, logs requests
+│   ├── state.js         → search/filter/sort/paginate logic + validation
+│   ├── ui.js            → renders things to the DOM
+│   └── app.js            → wires everything together
+├── tests/
+│   ├── state.test.js    → tests for state.js
+│   └── api.test.js      → tests for api.js
+├── package.json
+├── START.bat
+└── README.md
 ```
 
-Then visit **http://localhost:8080**
+I split it this way to keep things separated — `api.js` only knows how to talk to the network, `state.js` only deals with data/logic and doesn't touch the DOM at all, `ui.js` only renders things, and `app.js` is the glue that listens for clicks/input and decides what should happen. Made it a lot easier to write tests for `state.js` and `api.js` since neither of them depends on having a browser DOM around.
 
----
+## Tests
 
-## Assignment Requirements Checklist
-
-| Requirement | Status | Implementation |
-|---|---|---|
-| Display users (ID, First Name, Last Name, Email, Department) | ✅ | Table in `index.html`, data from `/users` |
-| Add / Edit / Delete buttons | ✅ | Header + row action buttons |
-| Add/Edit form modal | ✅ | `#user-modal` with validation |
-| Pagination (10, 25, 50, 100) | ✅ | Footer page-size selector + page controls |
-| Filter popup (first name, last name, email, department) | ✅ | `#filter-modal` + removable chips |
-| Search and sort | ✅ | Debounced search + sortable column headers |
-| Responsive UI | ✅ | Mobile card layout in `style.css` |
-| JSONPlaceholder `/users` API | ✅ | All CRUD via Fetch in `js/api.js` |
-| View — GET `/users` | ✅ | `fetchUsers()` |
-| Add — POST `/users` | ✅ | `createUser()` |
-| Edit — GET + PUT `/users/:id` | ✅ | `fetchUser()` + `updateUser()` |
-| Delete — DELETE `/users/:id` | ✅ | `deleteUser()` |
-| Error handling | ✅ | Error state, retry, toasts |
-| Client-side validation | ✅ | `validateUserForm()` in `state.js` |
-| Modular & scalable code | ✅ | Split into `api.js`, `state.js`, `ui.js`, `app.js` |
-| Unit tests | ✅ | `tests/state.test.js`, `tests/api.test.js` (Node's built-in test runner) |
-
----
-
-## JSONPlaceholder Integration (Free API)
-
-This project uses **[JSONPlaceholder](https://jsonplaceholder.typicode.com)** — a free online REST API for testing and prototyping. No API key or signup required.
-
-### Endpoints used
-
-| Method | Endpoint | Action |
-|--------|----------|--------|
-| `GET` | `/users` | Load all users on page start |
-| `GET` | `/users/:id` | Fetch single user when editing |
-| `POST` | `/users` | Add a new user |
-| `PUT` | `/users/:id` | Update existing user |
-| `DELETE` | `/users/:id` | Delete user |
-
-### How to see the integration working
-
-1. Run the app (see Quick Start above)
-2. Look for the green dot: **"Connected to JSONPlaceholder API"**
-3. Click **API Log** in the header to see live requests as you Add / Edit / Delete
-4. Open browser DevTools → **Network** tab to watch real HTTP calls to `jsonplaceholder.typicode.com`
-
-### Data mapping
-
-JSONPlaceholder returns `name` and `company.name`, not `firstName`/`lastName`/`department`. The app normalizes this in `normalizeUser()` (`state.js`):
-
-- `name` → split into **First Name** + **Last Name**
-- `company.name` → **Department**
-
-### Mock API note
-
-POST/PUT/DELETE succeed but **don't persist** on the server. The app updates local state so changes appear immediately during your session. Refreshing the page reloads the original 10 users from the API.
-
----
-
-## Features
-
-- **View** — fetches and lists all users
-- **Add** — modal form posts to `/users`, merges into local state
-- **Edit** — pre-filled modal, `PUT`s to `/users/:id`
-- **Delete** — confirmation modal, `DELETE /users/:id`
-- **Pagination** — 10 / 25 / 50 / 100 per page
-- **Filter popup** — filter by name, email, department (removable chips)
-- **Search** — debounced instant search
-- **Sort** — all columns, asc/desc
-- **Validation** — required fields, min length, email format
-- **Error handling** — loading / empty / error states, retry, toasts
-- **API status & live log** — shows JSONPlaceholder connection + request history
-
-## Running Tests
-
-Unit tests cover the pure logic in `js/state.js` (search, filter, sort, pagination,
-validation, JSONPlaceholder data normalization) and the request logic in `js/api.js`
-(using a mocked `fetch`, so no network or real API calls happen during tests).
-
-Requires [Node.js](https://nodejs.org) (v18+) — no extra dependencies, uses Node's
-built-in test runner.
+I added unit tests for the logic in `state.js` (search, filtering, sorting, pagination, validation, the JSONPlaceholder data mapping) and `api.js` (the CRUD functions, with `fetch` mocked so tests don't need an internet connection). Using Node's built-in test runner, so no extra packages to install.
 
 ```cmd
 npm test
 ```
 
-## Project Structure
+Currently passing 41 tests across both files.
 
-```
-user-mgmt-dashboard/
-├── START.bat           # One-click Windows launcher
-├── index.html          # Markup, modals, table shell
-├── css/style.css       # All styling
-├── js/
-│   ├── api.js          # JSONPlaceholder Fetch wrappers + activity log
-│   ├── state.js        # State, filter, sort, paginate, validation
-│   ├── ui.js           # DOM rendering helpers
-│   └── app.js          # Event wiring + business logic
-├── tests/
-│   ├── state.test.js   # Unit tests for state.js
-│   └── api.test.js     # Unit tests for api.js (mocked fetch)
-├── package.json        # npm test script
-└── README.md
-```
+## Assumptions I made
 
-## Assumptions
+- Department is a fixed dropdown list rather than free text, mainly so filtering and sorting by department stays consistent.
+- Since the API doesn't persist writes, I treat a successful response as "this should now reflect in the UI" and update local state directly rather than re-fetching.
 
-- Department uses a fixed dropdown for consistent filtering/sorting.
-- Local state syncs after every successful Add/Edit/Delete since the mock API doesn't persist writes.
+## Challenges I ran into
 
-## Challenges Faced
+- Getting the JSONPlaceholder fields to line up with what the assignment wanted (firstName/lastName/department vs. name/company) took a bit of back-and-forth before I settled on the normalize/de-normalize functions.
+- Since the mock API doesn't actually save anything, I had to think through how to keep the UI in sync manually after each operation instead of just refetching.
+- Getting search, filters, sorting, and pagination to all work together correctly (without stepping on each other) meant settling on one clear order: filter first, then sort, then paginate, every time the table renders.
 
-- JSONPlaceholder schema differs from the assignment schema — solved with `normalizeUser()`.
-- Mock API doesn't persist writes — local `allUsers` array kept in sync after each operation.
-- Search + filters + sort + pagination all active together — single render pipeline: filter → sort → paginate → draw.
+## What I'd improve with more time
 
-## Improvements With More Time
-
-- Infinite scrolling as alternative to pagination
-- Persist filters/sort to `sessionStorage` or URL query string
-- Optimistic UI rollback on failed requests
-- Expand test coverage to `ui.js` rendering functions (currently untested since they require a DOM)
+- Add infinite scroll as an alternative to pagination
+- Save the current filters/sort/search to the URL or sessionStorage so they survive a refresh
+- Roll back the UI properly if a request fails partway through, instead of just showing a toast
+- Add tests for the `ui.js` rendering functions too — skipped these for now since they need a DOM environment to test properly
