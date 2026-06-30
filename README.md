@@ -52,6 +52,7 @@ Then visit **http://localhost:8080**
 | Error handling | ✅ | Error state, retry, toasts |
 | Client-side validation | ✅ | `validateUserForm()` in `state.js` |
 | Modular & scalable code | ✅ | Split into `api.js`, `state.js`, `ui.js`, `app.js` |
+| Unit tests | ✅ | `tests/state.test.js`, `tests/api.test.js` (Node's built-in test runner) |
 
 ---
 
@@ -103,6 +104,19 @@ POST/PUT/DELETE succeed but **don't persist** on the server. The app updates loc
 - **Error handling** — loading / empty / error states, retry, toasts
 - **API status & live log** — shows JSONPlaceholder connection + request history
 
+## Running Tests
+
+Unit tests cover the pure logic in `js/state.js` (search, filter, sort, pagination,
+validation, JSONPlaceholder data normalization) and the request logic in `js/api.js`
+(using a mocked `fetch`, so no network or real API calls happen during tests).
+
+Requires [Node.js](https://nodejs.org) (v18+) — no extra dependencies, uses Node's
+built-in test runner.
+
+```cmd
+npm test
+```
+
 ## Project Structure
 
 ```
@@ -115,6 +129,10 @@ user-mgmt-dashboard/
 │   ├── state.js        # State, filter, sort, paginate, validation
 │   ├── ui.js           # DOM rendering helpers
 │   └── app.js          # Event wiring + business logic
+├── tests/
+│   ├── state.test.js   # Unit tests for state.js
+│   └── api.test.js     # Unit tests for api.js (mocked fetch)
+├── package.json        # npm test script
 └── README.md
 ```
 
@@ -134,4 +152,4 @@ user-mgmt-dashboard/
 - Infinite scrolling as alternative to pagination
 - Persist filters/sort to `sessionStorage` or URL query string
 - Optimistic UI rollback on failed requests
-- Unit tests for `state.js` helper functions
+- Expand test coverage to `ui.js` rendering functions (currently untested since they require a DOM)
