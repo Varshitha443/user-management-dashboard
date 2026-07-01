@@ -1,0 +1,9 @@
+{
+  "name": "user-mgmt-dashboard",
+  "version": "1.0.0",
+  "description": "User Management Dashboard - Ajackus JavaScript Basics Assignment",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}
